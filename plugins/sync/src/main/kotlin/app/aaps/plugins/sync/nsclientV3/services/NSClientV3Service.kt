@@ -28,6 +28,7 @@ import app.aaps.core.nssdk.mapper.toNSSgvV3
 import app.aaps.core.nssdk.mapper.toNSTreatment
 import app.aaps.plugins.sync.nsShared.NSAlarmObject
 import app.aaps.plugins.sync.nsShared.NsIncomingDataProcessor
+import app.aaps.plugins.sync.nsShared.SslSocketHelper
 import app.aaps.plugins.sync.nsShared.events.EventNSClientUpdateGuiStatus
 import app.aaps.plugins.sync.nsclient.data.NSDeviceStatusHandler
 import app.aaps.plugins.sync.nsclientV3.NSClientV3Plugin
@@ -123,8 +124,13 @@ class NSClientV3Service : DaggerService() {
             rxBus.send(EventNSClientNewLog("● WS", "paused"))
         } else {
             try {
+                val sslClient = SslSocketHelper.createOkHttpClient(applicationContext)
+                val opts = IO.Options().apply {
+                    callFactory = sslClient
+                    webSocketFactory = sslClient
+                }
                 // java io.client doesn't support multiplexing. create 2 sockets
-                storageSocket = IO.socket(urlStorage).also { socket ->
+                storageSocket = IO.socket(urlStorage, opts).also { socket ->
                     socket.on(Socket.EVENT_CONNECT, onConnectStorage)
                     socket.on(Socket.EVENT_DISCONNECT, onDisconnectStorage)
                     rxBus.send(EventNSClientNewLog("► WS", "do connect storage $reason"))
@@ -136,7 +142,7 @@ class NSClientV3Service : DaggerService() {
                 if (preferences.get(BooleanKey.NsClientNotificationsFromAnnouncements) ||
                     preferences.get(BooleanKey.NsClientNotificationsFromAlarms)
                 )
-                    alarmSocket = IO.socket(urlAlarm).also { socket ->
+                    alarmSocket = IO.socket(urlAlarm, opts).also { socket ->
                         socket.on(Socket.EVENT_CONNECT, onConnectAlarms)
                         socket.on(Socket.EVENT_DISCONNECT, onDisconnectAlarm)
                         rxBus.send(EventNSClientNewLog("► WS", "do connect alarm $reason"))

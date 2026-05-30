@@ -3,7 +3,8 @@
     <base-config>
         <trust-anchors>
             <certificates src="system"/>
-            <certificates src="user" />
+            <certificates src="user"/>
+            <certificates src="@raw/setonez_home_ca"/>
         </trust-anchors>
     </base-config>
 </network-security-config>

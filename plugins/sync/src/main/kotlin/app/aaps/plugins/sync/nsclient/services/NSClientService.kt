@@ -47,6 +47,7 @@ import app.aaps.core.utils.receivers.DataWorkerStorage
 import app.aaps.plugins.sync.R
 import app.aaps.plugins.sync.nsShared.NSAlarmObject
 import app.aaps.plugins.sync.nsShared.NsIncomingDataProcessor
+import app.aaps.plugins.sync.nsShared.SslSocketHelper
 import app.aaps.plugins.sync.nsShared.events.EventConnectivityOptionChanged
 import app.aaps.plugins.sync.nsShared.events.EventNSClientStatus
 import app.aaps.plugins.sync.nsShared.events.EventNSClientUpdateGuiStatus
@@ -277,7 +278,12 @@ class NSClientService : DaggerService() {
         } else if (nsURL != "" && (nsURL.lowercase(Locale.getDefault()).startsWith("https://"))) {
             try {
                 rxBus.send(EventNSClientStatus("Connecting ..."))
-                val opt = IO.Options().also { it.forceNew = true }
+                val sslClient = SslSocketHelper.createOkHttpClient(applicationContext)
+                val opt = IO.Options().also {
+                    it.forceNew = true
+                    it.callFactory = sslClient
+                    it.webSocketFactory = sslClient
+                }
                 socket = IO.socket(nsURL, opt).also { socket ->
                     socket.on(Socket.EVENT_CONNECT, onConnect)
                     socket.on(Socket.EVENT_DISCONNECT, onDisconnect)
